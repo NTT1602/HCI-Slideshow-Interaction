@@ -4,7 +4,6 @@ from __future__ import annotations
 from ..config import Config
 from ..datatypes import ACCEPT, Decision
 
-# từ teammate: gate.py -> gesture_to_slide_action
 ACTION_NAMES = {"next": "NEXT SLIDE", "previous": "PREVIOUS SLIDE", "play_pause": "PLAY/PAUSE", "exit_show": "EXIT SLIDESHOW"}
 MODIFIERS = ("ctrl", "alt", "shift", "cmd")
 
@@ -32,6 +31,12 @@ class ActionDispatcher:
             parse_key(spec)
         if not self.dry_run:
             self._check_keys()
+    
+    def set_dry_run(self, flag: bool) -> None:
+        """Đổi giữa tập luyện và gửi phím thật khi đang chạy. Bật gửi thật sẽ kiểm tra pynput và keymap trước."""
+        if not flag:
+            self._check_keys()  
+        self.dry_run = flag
 
     def _get_backend(self):
         if self._backend is None:

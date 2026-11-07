@@ -1,8 +1,3 @@
-"""Khối: chuẩn hóa tọa độ + đặc trưng trên cửa sổ theo mili giây.
-
-landmarks_to_vector là MỘT hàm dùng chung cho huấn luyện (training/) và chạy thật,
-để model không bị lệch dữ liệu. Teammate trước đây đưa thẳng 63 tọa độ thô vào model.
-"""
 from __future__ import annotations
 
 import math
@@ -19,7 +14,6 @@ def _d(a, b) -> float:
 
 
 def landmarks_to_vector(lm) -> list:
-    """63 số: tọa độ tương đối cổ tay, chia cho kích thước bàn tay (cổ tay -> khớp gốc ngón giữa)."""
     wx, wy, wz = lm[0][0], lm[0][1], lm[0][2]
     scale = max(_d(lm[0], lm[9]), 1e-6)
     out = []
@@ -37,12 +31,9 @@ def frame_ext(lm) -> list:
         ext.append(1.0 / (1.0 + math.exp(-(r - 1.05) / 0.08)))
     return ext
 
-THUMB_MARGIN = 0.88
+THUMB_MARGIN = 0.9
 
 def frame_thumb(lm):
-    """(mức duỗi ngón cái 0..1, hướng dọc -1..1; +1 = chĩa lên).
-    Duỗi = ngón cái THẲNG: khoảng cách khớp gốc -> đầu / (tổng hai đốt). Không phụ thuộc hướng tay hay kích thước tay.
-    Chỉ ngón cái duỗi và bốn ngón kia co thì RuleRecognizer mới tính là like / dislike."""
     seg = _d(lm[2], lm[3]) + _d(lm[3], lm[4])
     length = _d(lm[2], lm[4])
     straight = length / max(seg, 1e-6)

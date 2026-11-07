@@ -1,6 +1,6 @@
-# Mọi tham số thí nghiệm nằm ở đây; bản sao được ghi vào dòng đầu của mỗi file log phiên.
+# Mọi tham số thí nghiệm nằm ở đây; bản sao được ghi vào dòng đầu của mỗi file log session.
 policy: fixed            # naive | fixed | adaptive | abstain | combined
-recognizer: rule           # rf (Random Forest của teammate) | rule (luật hình học, không cần model)
+recognizer: rule           # rf (Random Forest) | rule (luật hình học, không cần model)
 model_path: models/rf.pkl
 camera_index: 0
 preview_width: 480       # độ rộng cửa sổ camera (px)
@@ -19,8 +19,8 @@ play_pause: 500          # nắm tay: giữ lâu hơn vì bàn tay hay nắm l�
 confirm_commands: [exit_show]   # lệnh cần xác nhận: giơ like = đồng ý, dislike = hủy
 confirm_hold_ms: 400     # giữ like bao lâu thì xác nhận
 confirm_timeout_ms: 5000 # không like/dislike trong ngần này thì về IDLE
-hold_ms: 400             # từ teammate: hold_frames=5 (~170 ms ở 30 fps); đã tăng vì có thêm bước ARM
-cooldown_ms: 1000        # từ teammate: cooldown_frames=20 (~670 ms ở 30 fps)
+hold_ms: 400             # hold_frames=5 (~170 ms ở 30 fps);
+cooldown_ms: 1000        # cooldown_frames=20 (~670 ms ở 30 fps)
 margin: 0.25             # abstain: chênh lệch top-1/top-2 tối thiểu
 uncertain_floor: 0.40
 
@@ -29,7 +29,7 @@ speed_gain: 0.08
 max_boost: 0.15
 hold_gain: 0.25
 
-keymap:                  # từ teammate: gesture_to_slide_action -> phím thật
+keymap:                  # gesture_to_slide_action
   next: right
   previous: left
   exit_show: esc  

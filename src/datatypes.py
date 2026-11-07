@@ -7,7 +7,7 @@ from typing import Optional
 IDLE, ARMED, COMMAND, CONFIRM, EXECUTE, COOLDOWN = "IDLE", "ARMED", "COMMAND", "CONFIRM", "EXECUTE", "COOLDOWN"
 ACCEPT, REJECT, UNCERTAIN = "ACCEPT", "REJECT", "UNCERTAIN"
 ARM_LABEL, NONE_LABEL = "arm", "none"
-COMMANDS = ("next", "previous", "play_pause", "exit_show")  # nhãn của teammate (03_collect: LABELS) + exit_show
+COMMANDS = ("next", "previous", "play_pause", "exit_show")
 CONFIRM_YES, CONFIRM_NO = "like", "dislike"  # cử chỉ xác nhận / hủy (không phải lệnh, chỉ dùng trong trạng thái CONFIRM)
 
 

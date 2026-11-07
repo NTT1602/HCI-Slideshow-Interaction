@@ -1,5 +1,6 @@
 """Điểm vào:  python -m src live [--config config.yaml] [--policy fixed] [--send-keys]
-              python -m src replay sessions/xxx.jsonl [--policies fixed,abstain]"""
+              python -m src replay sessions/xxx.jsonl [--policies fixed,abstain]
+              python -m src ui [--config config.yaml] [--policy fixed] [--no-log]"""
 from __future__ import annotations
 
 import sys
@@ -38,6 +39,10 @@ def main():
     lv.add_argument("--send-keys", action="store_true", help="Gửi phím thật (mặc định là dry-run)")
     lv.add_argument("--no-log", action="store_true", help="Không ghi log session")
 
+    ui = sub.add_parser("ui", parents=[cfg_parent], help="Mở giao diện: nút Bắt đầu, đổi TẬP/GỬI THẬT, cửa sổ trạng thái nhỏ")
+    ui.add_argument("--policy", choices=POLICIES, help="Chiến lược gating")
+    ui.add_argument("--no-log", action="store_true", help="Không ghi log session")
+
     rp = sub.add_parser("replay", parents=[cfg_parent], help="Chạy lại session đã ghi để đánh giá")
     rp.add_argument("log", help="File log jsonl")
     rp.add_argument("--policies", default=",".join(POLICIES), help="Danh sách policies cách nhau bằng dấu phẩy")
@@ -47,7 +52,13 @@ def main():
 
     config_path = getattr(a, "config", "config.yaml")
 
-    if a.cmd == "live":
+    if a.cmd == "ui":
+        from .ui.control_panel import run_ui
+        cfg = load_config(config_path)
+        if a.policy:
+            cfg = cfg.with_policy(a.policy)
+        run_ui(replace(cfg, dry_run=True), log=not a.no_log)  # luôn mở ở chế độ TẬP; đổi sang THẬT bằng nút
+    elif a.cmd == "live":
         from .live import run_live
         cfg = load_config(config_path)
         if a.policy:

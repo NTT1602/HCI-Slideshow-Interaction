@@ -3,7 +3,9 @@ Thay cho 05_realtime.py và run_gate_realtime.py của teammate. Cần webcam v�
 from __future__ import annotations
 
 import os
+import threading
 import time
+from dataclasses import replace
 
 import cv2
 
@@ -12,6 +14,7 @@ from .evaluation.session_logger import SessionLogger
 from .perception.camera_source import CameraSource
 from .perception.hand_tracker import HandTracker
 from .pipeline import Pipeline
+from .ui.overlay_ui import OverlayUI
 
 WINDOW = "Gesture slide controller (q de thoat)"
 
@@ -47,27 +50,93 @@ def _setup_window(cfg: Config) -> None:
     except cv2.error:
         pass  # bản OpenCV/hệ điều hành không hỗ trợ: bỏ qua
 
+class LiveSession:
+    """Một phiên chạy: run() chặn cho tới khi request_stop() (hoặc bấm q ở cửa sổ camera, hoặc lỗi).
+    Có thể đổi dry-run / bật tắt cửa sổ camera khi đang chạy; snapshot() cho giao diện đọc trạng thái từ luồng khác."""
+
+    def __init__(self, cfg: Config, log: bool = True, preview: bool = True):
+        self.cfg, self.log, self.preview = cfg, log, preview
+        self.dry_run = cfg.dry_run
+        self.stop_event = threading.Event()
+        self.pipe = None
+        self.running = False
+        self.starting = True
+        self.error = None
+        self.fps = 0.0
+        self.hand_ratio = 0.0
+
+    def request_stop(self) -> None:
+        self.stop_event.set()
+
+    def set_dry_run(self, flag: bool) -> None:
+        if self.pipe is not None:
+            self.pipe.dispatcher.set_dry_run(flag)  # có thể raise nếu thiếu pynput: lúc đó chế độ giữ nguyên
+        self.dry_run = flag
+
+    def snapshot(self) -> dict:
+        pipe = self.pipe
+        ov = pipe.overlay if pipe else None
+        return {
+            "running": self.running, "starting": self.starting, "dry_run": self.dry_run, "error": self.error,
+            "hud": dict(ov.hud) if ov else None,
+            "last_command": ov.last_command if ov else None,
+            "last_command_age": (time.monotonic() - ov.last_command_time) if ov and ov.last_command else None,
+            "fps": self.fps, "hand": self.hand_ratio,
+        }
+
+    def run(self) -> None:
+        logger = None
+        try:
+            cfg = replace(self.cfg, dry_run=self.dry_run)
+            if self.log:
+                os.makedirs(cfg.log_dir, exist_ok=True)
+                logger = SessionLogger(os.path.join(cfg.log_dir, time.strftime("%Y%m%d-%H%M%S") + ".jsonl"), cfg)
+            self.pipe = Pipeline(cfg, overlay=OverlayUI(on_change=_print_state), logger=logger)
+            if not self.dry_run:
+                print("Đang GỬI PHÍM THẬT. Bấm vào cửa sổ PowerPoint (đang trình chiếu) để nó nhận phím; Ctrl+C trong terminal để dừng.")
+            beat = Heartbeat(cfg.status_every_s, time.monotonic())
+            with CameraSource(cfg.camera_index) as cam, HandTracker() as tracker:
+                self.running, self.starting = True, False
+                win_open, n, hands, t_fps = False, 0, 0, time.monotonic()
+                while not self.stop_event.is_set():
+                    frame, t_ms = cam.read()
+                    if frame is None:
+                        print("[live] Camera không trả khung hình nữa, dừng.")
+                        break
+                    obs = tracker.track(frame, t_ms)
+                    self.pipe.process(obs)
+                    now = time.monotonic()
+                    n, hands = n + 1, hands + (1 if obs.landmarks is not None else 0)
+                    if now - t_fps >= 1.0:
+                        self.fps, self.hand_ratio, n, hands, t_fps = n / (now - t_fps), hands / n, 0, 0, now
+                    msg = beat.update(obs.landmarks is not None, self.pipe.overlay.hud, now)
+                    if msg:
+                        print(msg)
+                    if self.preview:
+                        if not win_open:
+                            _setup_window(cfg)
+                            win_open = True
+                        tracker.draw(frame)
+                        self.pipe.overlay.draw(frame)
+                        cv2.imshow(WINDOW, frame)
+                        if cv2.waitKey(1) & 0xFF == ord("q"):
+                            break
+                    elif win_open:
+                        cv2.destroyWindow(WINDOW)
+                        win_open = False
+        except KeyboardInterrupt:
+            pass
+        except Exception as e:  # giao diện hiển thị lỗi này thay vì đóng im lặng
+            self.error = f"{type(e).__name__}: {e}"
+        finally:
+            self.running = self.starting = False
+            cv2.destroyAllWindows()
+            if logger:
+                logger.close()
+
+
 def run_live(cfg: Config, log: bool = True):
-    logger = None
-    if log:
-        os.makedirs(cfg.log_dir, exist_ok=True)
-        logger = SessionLogger(os.path.join(cfg.log_dir, time.strftime("%Y%m%d-%H%M%S") + ".jsonl"), cfg)
-    pipe = Pipeline(cfg, logger=logger)
-    if not cfg.dry_run:
-        print("Đang GỬI PHÍM THẬT. Bấm vào cửa sổ PowerPoint (đang trình chiếu) để nó nhận phím; Ctrl+C trong terminal để dừng.")
-    try:
-        with CameraSource(cfg.camera_index) as cam, HandTracker() as tracker:
-            while True:
-                frame, t_ms = cam.read()
-                if frame is None:
-                    break
-                dec = pipe.process(tracker.track(frame, t_ms))
-                tracker.draw(frame)
-                pipe.overlay.draw(frame)
-                cv2.imshow("Gesture slide controller (q de thoat)", frame)
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    break
-    finally:
-        cv2.destroyAllWindows()
-        if logger:
-            logger.close()
+    session = LiveSession(cfg, log=log, preview=True)
+    session.run()
+    if session.error:
+        print(f"[live] Lỗi: {session.error}")

@@ -5,9 +5,21 @@ Hai bản cùng giao diện: RFRecognizer (Random Forest của teammate) và Rul
 from __future__ import annotations
 
 from ..config import Config
-from ..datatypes import COMMANDS, CONFIRM_YES, CONFIRM_NO, NONE_LABEL, FeatureWindow, Hypothesis
+from ..datatypes import COMMANDS, CONFIRM_NO, CONFIRM_YES, NONE_LABEL, FeatureWindow, Hypothesis
 
-RULE_TEMPLATES = {"arm": (0, 0, 0, 0), "next": (1, 1, 0, 0), "previous": (1, 0, 0, 0), "play_pause": (1, 1, 1, 1), "exit_show": (1, 1, 1, 0)}
+# Bảng mẫu cử chỉ (luật hình học). Mỗi mẫu: (trỏ, giữa, nhẫn, út) hoặc (trỏ, giữa, nhẫn, út, ngón_cái)
+#   4 ngón:     1 = duỗi, 0 = co
+#   ngón cái:   0 = co (gập vào) | 1 = duỗi chĩa LÊN | -1 = duỗi chĩa XUỐNG | 2 = duỗi hướng bất kỳ | bỏ trống (4 số) = không quan tâm
+
+RULE_TEMPLATES = {
+    "arm":        (0, 0, 0, 0, 0),        # nắm tay
+    "next":       (1, 1, 0, 0),        # trỏ + giữa
+    "previous":   (1, 0, 0, 0),        # trỏ
+    "play_pause": (1, 1, 1, 1),        # mở bàn tay
+    "exit_show":  (1, 1, 1, 0),        # 3 ngón (cần xác nhận)
+    "like":       (0, 0, 0, 0, 1),     # nắm tay + ngón cái lên   (đồng ý)
+    "dislike":    (0, 0, 0, 0, -1),    # nắm tay + ngón cái xuống (hủy)
+}
 OTHER_MASS = 0.05
 
 
@@ -35,22 +47,34 @@ class RuleRecognizer:
     def __call__(self, fw: FeatureWindow) -> Hypothesis:
         if not fw.hand:
             return Hypothesis(fw.t_ms, False, NONE_LABEL)
+        t_ext, t_dir = fw.thumb 
+        thumb = {
+            0: 1.0 - t_ext,
+            1: t_ext * min(1.0, max(0.0, (t_dir - 0.5) / 0.3)),
+            -1: t_ext * min(1.0, max(0.0, (-t_dir - 0.5) / 0.3)),
+            2: t_ext,
+        }
         lik = {}
         for name, tpl in RULE_TEMPLATES.items():
             p = 1.0
-            for e, t in zip(fw.ext, tpl):
+            for e, t in zip(fw.ext, tpl[:4]):
                 p *= e if t else (1.0 - e)
+            if len(tpl) > 4:
+                p *= thumb[tpl[4]]
+            else:  
+                sib = [thumb[o[4]] for o in RULE_TEMPLATES.values() if len(o) > 4 and o[:4] == tpl[:4]]
+                if sib:
+                    p *= 1.0 - max(sib)
             lik[name] = p
-        thumb_ext, thumb_dir = fw.thumb  # ngón cái duỗi? chĩa lên hay xuống? (features.frame_thumb)
-        up = thumb_ext * min(1.0, max(0.0, (thumb_dir - 0.5) / 0.3))
-        down = thumb_ext * min(1.0, max(0.0, (-thumb_dir - 0.5) / 0.3))
-        fist = lik["play_pause"]
-        lik["play_pause"] = fist * (1.0 - max(up, down))
-        lik[CONFIRM_YES], lik[CONFIRM_NO] = fist * up, fist * down
-        lik[NONE_LABEL] = lik.get(NONE_LABEL, 0.0) + OTHER_MASS  # tổ hợp ngón lạ coi là "none"
+        lik[NONE_LABEL] = lik.get(NONE_LABEL, 0.0) + OTHER_MASS  # tổ hợp ngón lạ coi là none
         z = sum(lik.values())
         return _to_hypothesis(fw.t_ms, {k: v / z for k, v in lik.items()})
 
 
 def make_recognizer(cfg: Config):
-    return RFRecognizer(cfg.model_path) if cfg.recognizer == "rf" else RuleRecognizer()
+    if cfg.recognizer == "rf":
+        return RFRecognizer(cfg.model_path)
+    # if cfg.recognizer in ("external", "hybrid"):
+    #     from .external_recognizer import ExternalRecognizer, HybridRecognizer  # nhập muộn: chỉ cần khi dùng model ngoài
+    #     return HybridRecognizer(cfg) if cfg.recognizer == "hybrid" else ExternalRecognizer(cfg)
+    return RuleRecognizer()
