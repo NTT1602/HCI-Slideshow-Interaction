@@ -11,7 +11,7 @@ from .config import Config
 from .decision.gate import IntentGate
 from .perception.features import FeatureExtractor
 from .perception.recognizer import make_recognizer
-from .datatypes import Decision, Observation
+from .datatypes import ACCEPT, COOLDOWN, Decision, Observation
 from .ui.overlay_ui import OverlayUI
 
 
@@ -31,6 +31,10 @@ class Pipeline:
         fw = self.features(obs)
         hyp = self.recognizer(fw)
         dec = self.gate(fw, hyp)
+        if (dec.verdict == ACCEPT or dec.state == COOLDOWN) and hasattr(self.recognizer, "reset"):
+            # Recognizer có bộ nhớ chuỗi (GRU): bỏ mọi chuyển động trong lúc cooldown, nếu không phần đuôi
+            # của chính cú vuốt vừa thực hiện sẽ bị nhận lại thành lệnh thứ hai khi hết cooldown.
+            self.recognizer.reset()
         dec = self.dispatcher(dec)
         dec = self.overlay(dec)
         if self.logger:

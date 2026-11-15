@@ -65,5 +65,5 @@ class FeatureExtractor:
             path = sum(_d(self.buf[i][3], self.buf[i - 1][3]) for i in range(1, n))
             span = (self.buf[-1][0] - self.buf[0][0]) / 1000.0
             speed = path / span if span > 0 else 0.0
-        return FeatureWindow(obs.t_ms, True, vector, ext, speed, n, thumb)
+        return FeatureWindow(obs.t_ms, True, vector, ext, speed, n, thumb, lm)
 

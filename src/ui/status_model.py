@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-CMD_VI = {"next": "Slide tiếp", "previous": "Slide trước", "play_pause": "Phát / dừng", "exit_show": "Thoát"}
+CMD_VI = {"next": "Slide tiếp", "previous": "Slide trước", "play_pause": "Phát / dừng", "start_show": "Vào trình chiếu", "exit_show": "Thoát"}
 LAST_CMD_SHOW_S = 1.5 
 STATE_VIEW = {
     "IDLE": ("CHỜ", "#505050", "Mở bàn tay để bắt đầu"),

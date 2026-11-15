@@ -1,7 +1,7 @@
 """Policy cắm rời: hàm thuần (cfg, ctx) -> Gating. Intent Gate gọi hàm này mỗi khung.
 
 naive: không Intent Gate (mốc so sánh) | fixed: ngưỡng + thời gian giữ cố định (tương đương GestureGate của teammate
-nhưng có bước ARM) | adaptive: khắt khe hơn khi tay chuyển động nhanh | abstain: nhập nhằng thì UNCERTAIN | combined.
+nhưng có bước ARM) | swipe: không ARM, giữ ngưỡng + giữ ngắn (mặc định) | adaptive: khắt khe hơn khi tay chuyển động nhanh | abstain: nhập nhằng thì UNCERTAIN | combined.
 """
 from __future__ import annotations
 
@@ -53,7 +53,11 @@ def combined(cfg, ctx):
     return Gating(conf, cfg.margin, hold, True, True)
 
 
-REGISTRY = {"naive": naive, "fixed": fixed, "adaptive": adaptive, "abstain": abstain, "combined": combined}
+def swipe(cfg, ctx):  # không cần ARM: vuốt là chuyển slide; vẫn giữ ngưỡng tin cậy + thời gian giữ ngắn + cooldown
+    return Gating(cfg.conf, 0.0, cfg.swipe_hold_ms, False, False)
+
+
+REGISTRY = {"naive": naive, "fixed": fixed, "adaptive": adaptive, "abstain": abstain, "combined": combined, "swipe": swipe}
 
 
 def get_policy(name: str):

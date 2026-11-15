@@ -1,11 +1,11 @@
 """Khối: nhận diện cử chỉ. FeatureWindow -> Hypothesis (nhãn, xác suất, chênh lệch hai lớp đầu, cờ "không phải lệnh").
 
-Hai bản cùng giao diện: RFRecognizer (Random Forest của teammate) và RuleRecognizer (luật hình học, không cần model).
+RuleRecognizer (luật hình học) nhận tư thế tĩnh; vuốt next/previous do GRU nhận (xem gru_recognizer.py).
 """
 from __future__ import annotations
 
 from ..config import Config
-from ..datatypes import COMMANDS, CONFIRM_NO, CONFIRM_YES, NONE_LABEL, FeatureWindow, Hypothesis
+from ..datatypes import COMMANDS, NONE_LABEL, POSE_COMMANDS, FeatureWindow, Hypothesis
 
 # Bảng mẫu cử chỉ (luật hình học). Mỗi mẫu: (trỏ, giữa, nhẫn, út) hoặc (trỏ, giữa, nhẫn, út, ngón_cái)
 #   4 ngón:     1 = duỗi, 0 = co
@@ -13,12 +13,9 @@ from ..datatypes import COMMANDS, CONFIRM_NO, CONFIRM_YES, NONE_LABEL, FeatureWi
 
 RULE_TEMPLATES = {
     "arm":        (0, 0, 0, 0, 0),        # nắm tay
-    "next":       (1, 1, 0, 0),        # trỏ + giữa
-    "previous":   (1, 0, 0, 0),        # trỏ
     "play_pause": (1, 1, 1, 1),        # mở bàn tay
-    "exit_show":  (1, 1, 1, 0),        # 3 ngón (cần xác nhận)
-    "like":       (0, 0, 0, 0, 1),     # nắm tay + ngón cái lên   (đồng ý)
-    "dislike":    (0, 0, 0, 0, -1),    # nắm tay + ngón cái xuống (hủy)
+    "like":       (0, 0, 0, 0, 1),     # nắm tay + ngón cái lên   -> start_show (vào trình chiếu)
+    "dislike":    (0, 0, 0, 0, -1),    # nắm tay + ngón cái xuống -> exit_show (thoát trình chiếu)
 }
 OTHER_MASS = 0.05
 
@@ -27,23 +24,15 @@ def _to_hypothesis(t_ms: int, probs: dict) -> Hypothesis:
     ranked = sorted(probs.items(), key=lambda kv: kv[1], reverse=True)
     label = ranked[0][0]
     margin = ranked[0][1] - (ranked[1][1] if len(ranked) > 1 else 0.0)
-    return Hypothesis(t_ms, True, label, probs, margin, label if label in COMMANDS else None)
-
-
-class RFRecognizer:
-    # từ teammate: 05_realtime.py / run_gate_realtime.py -> joblib.load, predict_proba, argmax
-    def __init__(self, model_path: str):
-        import joblib
-        self.model = joblib.load(model_path)
-
-    def __call__(self, fw: FeatureWindow) -> Hypothesis:
-        if not fw.hand:
-            return Hypothesis(fw.t_ms, False, NONE_LABEL)
-        proba = self.model.predict_proba([list(fw.vector)])[0]
-        return _to_hypothesis(fw.t_ms, {str(c): float(p) for c, p in zip(self.model.classes_, proba)})
+    command = POSE_COMMANDS.get(label, label)
+    return Hypothesis(t_ms, True, label, probs, margin, command if command in COMMANDS else None)
 
 
 class RuleRecognizer:
+    def __init__(self, exclude=()):
+        """exclude: bỏ các mẫu này (vd. next/previous khi HybridRecognizer giao chúng cho GRU)."""
+        self.templates = {k: v for k, v in RULE_TEMPLATES.items() if k not in set(exclude)}
+
     def __call__(self, fw: FeatureWindow) -> Hypothesis:
         if not fw.hand:
             return Hypothesis(fw.t_ms, False, NONE_LABEL)
@@ -55,14 +44,14 @@ class RuleRecognizer:
             2: t_ext,
         }
         lik = {}
-        for name, tpl in RULE_TEMPLATES.items():
+        for name, tpl in self.templates.items():
             p = 1.0
             for e, t in zip(fw.ext, tpl[:4]):
                 p *= e if t else (1.0 - e)
             if len(tpl) > 4:
                 p *= thumb[tpl[4]]
             else:  
-                sib = [thumb[o[4]] for o in RULE_TEMPLATES.values() if len(o) > 4 and o[:4] == tpl[:4]]
+                sib = [thumb[o[4]] for o in self.templates.values() if len(o) > 4 and o[:4] == tpl[:4]]
                 if sib:
                     p *= 1.0 - max(sib)
             lik[name] = p
@@ -72,9 +61,9 @@ class RuleRecognizer:
 
 
 def make_recognizer(cfg: Config):
-    if cfg.recognizer == "rf":
-        return RFRecognizer(cfg.model_path)
-    # if cfg.recognizer in ("external", "hybrid"):
-    #     from .external_recognizer import ExternalRecognizer, HybridRecognizer  # nhập muộn: chỉ cần khi dùng model ngoài
-    #     return HybridRecognizer(cfg) if cfg.recognizer == "hybrid" else ExternalRecognizer(cfg)
+    if cfg.recognizer in ("gru", "hybrid"):
+        from .gru_recognizer import GRURecognizer, HybridRecognizer  # nhập muộn: chỉ cần TensorFlow khi dùng GRU
+        if cfg.recognizer == "hybrid":
+            return HybridRecognizer(cfg)
+        return GRURecognizer(cfg.gru_model_dir, flip_x=cfg.gru_flip_x, step_ms=cfg.gru_step_ms)
     return RuleRecognizer()

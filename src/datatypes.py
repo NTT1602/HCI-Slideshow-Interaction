@@ -7,8 +7,9 @@ from typing import Optional
 IDLE, ARMED, COMMAND, CONFIRM, EXECUTE, COOLDOWN = "IDLE", "ARMED", "COMMAND", "CONFIRM", "EXECUTE", "COOLDOWN"
 ACCEPT, REJECT, UNCERTAIN = "ACCEPT", "REJECT", "UNCERTAIN"
 ARM_LABEL, NONE_LABEL = "arm", "none"
-COMMANDS = ("next", "previous", "play_pause", "exit_show")
-CONFIRM_YES, CONFIRM_NO = "like", "dislike"  # cử chỉ xác nhận / hủy (không phải lệnh, chỉ dùng trong trạng thái CONFIRM)
+COMMANDS = ("next", "previous", "play_pause", "start_show", "exit_show")
+CONFIRM_YES, CONFIRM_NO = "like", "dislike"  # cử chỉ xác nhận / hủy trong trạng thái CONFIRM (nếu có lệnh cần xác nhận)
+POSE_COMMANDS = {"like": "start_show", "dislike": "exit_show"}  # tư thế -> lệnh: thumb up = vào trình chiếu, thumb down = thoát
 
 
 @dataclass(frozen=True)
@@ -38,6 +39,7 @@ class FeatureWindow:
     speed: float = 0.0                      # tốc độ cổ tay / kích thước bàn tay (1/giây)
     n: int = 0
     thumb: tuple = (0.0, 0.0)               # (điểm like, điểm dislike) 0..1: đầu ngón cái cao hơn / thấp hơn mọi ngón còn lại
+    landmarks: Optional[list] = None        # 21 x [x, y, z] thô của khung hiện tại (GRU cần tọa độ gốc, không làm mượt)
 
 
 @dataclass(frozen=True)

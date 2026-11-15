@@ -4,7 +4,7 @@ from __future__ import annotations
 from ..config import Config
 from ..datatypes import ACCEPT, Decision
 
-ACTION_NAMES = {"next": "NEXT SLIDE", "previous": "PREVIOUS SLIDE", "play_pause": "PLAY/PAUSE", "exit_show": "EXIT SLIDESHOW"}
+ACTION_NAMES = {"next": "NEXT SLIDE", "previous": "PREVIOUS SLIDE", "play_pause": "PLAY/PAUSE", "start_show": "START SLIDESHOW", "exit_show": "EXIT SLIDESHOW"}
 MODIFIERS = ("ctrl", "alt", "shift", "cmd")
 
 def parse_key(spec: str):

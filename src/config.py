@@ -3,14 +3,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, asdict, replace, fields
 
-POLICIES = ("naive", "fixed", "adaptive", "abstain", "combined")
+POLICIES = ("naive", "fixed", "adaptive", "abstain", "combined", "swipe")
 
 
 @dataclass(frozen=True)
 class Config:
     policy: str = "fixed"
-    recognizer: str = "rule"
-    model_path: str = "models/rf.pkl"
+    recognizer: str = "hybrid"      # hybrid (GRU vuốt + luật tư thế) | gru | rule (chỉ tư thế tĩnh)
+    gru_model_dir: str = "models/gru"   # gru.keras + gru.labels.json + gru.meta.json (từ HCI-project)
+    gru_flip_x: bool = True         # CameraSource lật gương, ảnh Jester thì không -> lật lại x cho GRU
+    gru_step_ms: float = 0          # > 0: nhịp lấy mẫu GRU (ms), ghi đè step_ms của meta.json; 0 = dùng meta (tốc độ lúc train)
+    gru_override: float = 0.5       # hybrid: GRU chắc >= mức này về next/previous thì dùng GRU thay luật
+    static_max_speed: float = 1.5   # hybrid: tay nhanh hơn mức này (kích thước tay/giây) thì không nhận tư thế lệnh tĩnh
     camera_index: int = 0
     preview_width: int = 480        # độ rộng cửa sổ camera (px)
     preview_topmost: bool = True    # cửa sổ camera luôn nổi trên cùng (để thấy HUD khi PowerPoint toàn màn hình)
@@ -23,9 +27,12 @@ class Config:
     conf: float = 0.80
     play_pause: int = 700  
     hold_ms: int = 400
+    swipe_hold_ms: int = 200        # policy swipe: thời gian giữ (ngắn hơn vì cú vuốt chỉ kéo dài ít khung)
+    disabled_commands: list = field(default_factory=list)  # lệnh bị tắt hẳn (gate coi như không phải lệnh)
+    reverse_block_ms: int = 0       # sau một cú vuốt, bỏ qua vuốt chiều ngược trong ngần này ms (nhịp đưa tay về)
     command_hold_ms: dict = field(default_factory=dict)
     cooldown_ms: int = 1200
-    confirm_commands: list = field(default_factory=lambda: ["exit_show"])  # lệnh cần bước xác nhận (like) trước khi thực hiện
+    confirm_commands: list = field(default_factory=list)  # lệnh cần bước xác nhận (like) trước khi thực hiện; hiện không dùng
     confirm_hold_ms: int = 400
     confirm_timeout_ms: int = 4000
     margin: float = 0.25
