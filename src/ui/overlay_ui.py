@@ -19,6 +19,7 @@ ACTION_NAMES = {
     "next": "NEXT SLIDE",
     "previous": "PREVIOUS SLIDE",
     "play_pause": "PLAY/PAUSE",
+    "start_show": "START SHOW",
     "exit_show": "EXIT SHOW"
 }
 

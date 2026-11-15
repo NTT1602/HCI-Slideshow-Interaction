@@ -10,6 +10,8 @@ from ..datatypes import (ACCEPT, ARM_LABEL, ARMED, COMMAND, CONFIRM, CONFIRM_NO,
                      Decision, FeatureWindow, Hypothesis)
 from .policies import Context, get_policy
 
+OPPOSITE = {"next": "previous", "previous": "next"}
+
 
 class IntentGate:
     def __init__(self, cfg: Config):
@@ -24,6 +26,8 @@ class IntentGate:
         self.cand_start = 0
         self.confirm_start = 0
         self.cooldown_until = 0     # từ teammate: GestureGate.cooldown (nhưng theo ms)
+        self.last_swipe = (None, -10**9)  # (lệnh vuốt gần nhất, thời điểm) để chặn nhịp đưa tay về
+        self.released = None        # lệnh tư thế tĩnh vừa thực hiện: phải bỏ tư thế ra rồi mới nhận lại (không lặp khi giữ tay)
 
     def _confirm(self, t, hyp, g, out):
         """Trạng thái CONFIRM: like (giữ confirm_hold_ms) = thực hiện lệnh đang chờ; dislike = hủy về IDLE; quá hạn = về IDLE."""
@@ -99,6 +103,14 @@ class IntentGate:
             self.cand, self.state = None, ARMED
             return out(REJECT, "armed")
         cmd = hyp.command
+        if cmd in self.cfg.disabled_commands:
+            cmd = None
+        if cmd != self.released:
+            self.released = None
+        elif cmd is not None:
+            cmd = None  # vẫn đang giữ nguyên tư thế của lệnh vừa thực hiện
+        if cmd in OPPOSITE and self.last_swipe[0] == OPPOSITE[cmd] and t - self.last_swipe[1] < self.cfg.reverse_block_ms:
+            cmd = None  # vuốt phải xong tay đưa về bên trái -> GRU đọc thành previous; bỏ qua chiều ngược trong một lúc
         if cmd is None or conf < self.cfg.uncertain_floor:
             self.cand, self.state = None, ARMED
             return out(REJECT, "no_command")
@@ -110,15 +122,19 @@ class IntentGate:
             self.cand, self.cand_start = cmd, t
         self.state = COMMAND
         hold = g.hold_ms
-        if g.require_arm:
-            hold = max(hold, self.cfg.command_hold_ms.get(cmd, 0)) 
-        prog = 1.0 if g.hold_ms <= 0 else min(1.0, (t - self.cand_start) / g.hold_ms)
+        if g.require_arm or self.cfg.policy == "swipe":  # naive giữ nguyên là mốc "không gate"
+            hold = max(hold, self.cfg.command_hold_ms.get(cmd, 0))
+        prog = 1.0 if hold <= 0 else min(1.0, (t - self.cand_start) / hold)
         if prog >= 1.0 and cmd in self.cfg.confirm_commands:
             self.state, self.pending, self.confirm_start, self.cand = CONFIRM, cmd, t, None
             return out(REJECT, "confirm", cmd)
         if prog >= 1.0:
             self.state = EXECUTE
             decision = out(ACCEPT, "accepted", cmd, 1.0)
+            if cmd in OPPOSITE:
+                self.last_swipe = (cmd, t)
+            else:
+                self.released = cmd
             self.state, self.cooldown_until, self.cand = COOLDOWN, t + self.cfg.cooldown_ms, None
             return decision
         return out(REJECT, "holding", cmd, prog)
