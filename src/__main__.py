@@ -42,6 +42,7 @@ def main():
     ui = sub.add_parser("ui", parents=[cfg_parent], help="Mở giao diện: nút Bắt đầu, đổi TẬP/GỬI THẬT, cửa sổ trạng thái nhỏ")
     ui.add_argument("--policy", choices=POLICIES, help="Chiến lược gating")
     ui.add_argument("--no-log", action="store_true", help="Không ghi log session")
+    ui.add_argument("--maximized", action="store_true", help="Mở cửa sổ ở dạng phóng to kín màn hình")
 
     rp = sub.add_parser("replay", parents=[cfg_parent], help="Chạy lại session đã ghi để đánh giá")
     rp.add_argument("log", help="File log jsonl")
