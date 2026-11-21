@@ -1,5 +1,5 @@
-from src.config import Config
-from src.decision.policies import Context, get_policy
+from src.config import POLICIES, Config
+from src.decision.policies import REGISTRY, Context, get_policy
 
 
 def test_fixed_uses_config_values():
@@ -10,6 +10,15 @@ def test_fixed_uses_config_values():
 def test_naive_has_no_gate():
     g = get_policy("naive")(Config(), Context(0, 0.0))
     assert not g.require_arm and g.hold_ms == 0
+
+
+def test_swipe_has_no_arm_and_uses_swipe_hold():
+    g = get_policy("swipe")(Config(conf=0.7, swipe_hold_ms=120), Context(0, 0.0))
+    assert (g.min_conf, g.hold_ms, g.require_arm, g.abstain) == (0.7, 120, False, False)
+
+
+def test_every_policy_in_config_is_registered():
+    assert set(POLICIES) == set(REGISTRY)
 
 
 def test_adaptive_stricter_when_hand_moves_fast():

@@ -18,12 +18,12 @@ class FakeKb:
         self.log.append(("release", k))
 
 
-FAKE_KEY = SimpleNamespace(right="<right>", left="<left>", space="<space>", alt="<alt>", ctrl="<ctrl>")
+FAKE_KEY = SimpleNamespace(right="<right>", left="<left>", esc="<esc>", f5="<f5>", shift="<shift>", alt="<alt>", ctrl="<ctrl>")
 
 
 def make(dry_run=False, **kw):
     kb = FakeKb()
-    cfg = Config(dry_run=dry_run, keymap={"next": "right", "previous": "left", "play_pause": "alt+p"}, **kw)
+    cfg = Config(dry_run=dry_run, keymap={"next": "right", "previous": "left", "start_show": "shift+f5", "exit_show": "esc"}, **kw)
     return ActionDispatcher(cfg, quiet=True, backend=(kb, FAKE_KEY)), kb
 
 
@@ -38,10 +38,22 @@ def test_next_and_previous_press_arrow_keys():
     assert kb.log == [("press", "<right>"), ("release", "<right>"), ("press", "<left>"), ("release", "<left>")]
 
 
-def test_play_pause_sends_alt_p_with_modifier_held_around_the_key():
+def test_start_show_sends_shift_f5_with_modifier_held_around_the_key():
     d, kb = make()
-    d(accept("play_pause"))
-    assert kb.log == [("press", "<alt>"), ("press", "p"), ("release", "p"), ("release", "<alt>")]
+    d(accept("start_show"))
+    assert kb.log == [("press", "<shift>"), ("press", "<f5>"), ("release", "<f5>"), ("release", "<shift>")]
+
+
+def test_exit_show_sends_escape():
+    d, kb = make()
+    d(accept("exit_show"))
+    assert kb.log == [("press", "<esc>"), ("release", "<esc>")]
+
+
+def test_command_without_a_key_sends_nothing():
+    d, kb = make()
+    d(accept("play_pause"))                       # đã bỏ khỏi bộ cử chỉ mới: không có phím tương ứng
+    assert kb.log == []
 
 
 def test_dry_run_records_but_sends_nothing():

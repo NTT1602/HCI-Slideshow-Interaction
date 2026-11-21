@@ -72,8 +72,21 @@ class IntentGate:
             early = self._confirm(t, hyp, g, out)
             if early is not None:
                 return early
-        if not g.require_arm and self.state == IDLE:
-            self.state, self.armed_refresh = ARMED, t
+        # if not g.require_arm and self.state == IDLE:
+        #     self.state, self.armed_refresh = ARMED, t
+        if not g.require_arm:
+            if self.cfg.presence_arm_ms < 0:                       # hành vi cũ
+                if self.state == IDLE:
+                    self.state, self.armed_refresh = ARMED, t
+            elif not hyp.has_hand:                                 # mất tay: về IDLE
+                if self.state in (ARMED, COMMAND):
+                    self.state = IDLE
+                self.arm_start = None
+            elif self.state == IDLE:                               # tay hiện đủ lâu: lên ARMED
+                if self.arm_start is None:
+                    self.arm_start = t
+                if t - self.arm_start >= self.cfg.presence_arm_ms:
+                    self.state, self.armed_refresh, self.arm_start = ARMED, t, None
         if self.state in (ARMED, COMMAND) and g.require_arm and t - self.armed_refresh > self.cfg.armed_timeout_ms:
             self.state, self.cand, self.need_release = IDLE, None, True
 
@@ -84,6 +97,9 @@ class IntentGate:
             return out(REJECT, "no_hand")
 
         if self.state == IDLE:
+            if not g.require_arm:
+                prog = 0.0 if self.arm_start is None else min(1.0, (t - self.arm_start) / max(1, self.cfg.presence_arm_ms))
+                return out(REJECT, "arming" if prog > 0 else "idle", progress=prog)
             if self.need_release:
                 if hyp.label != ARM_LABEL:
                     self.need_release = False

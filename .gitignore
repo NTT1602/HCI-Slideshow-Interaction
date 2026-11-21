@@ -1,8 +1,10 @@
 __pycache__/
 *.py[cod]
 .venv/
+.venv-ci/
 .env
 .vscode/
+sessions/
 models/*.pkl
 models/*.joblib
 data/raw/

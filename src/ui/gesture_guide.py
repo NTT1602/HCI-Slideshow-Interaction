@@ -17,10 +17,10 @@ GESTURES = [
      "how": "Mở bàn tay, vuốt từ TRÁI sang PHẢI.", "frames": ["swipe_right_1.png", "swipe_right_2.png"],
      "command": "Chuyển sang slide tiếp theo"},
     {"key": "like", "title": "Like",
-     "how": "Nắm tay, ngón cái chìa LÊN, giữ yên khoảng 0,5 giây.", "frames": ["like.png"],
+     "how": "Nắm tay, ngón cái chìa LÊN.", "frames": ["like.png"],
      "command": "Vào chế độ trình chiếu"},
     {"key": "dislike", "title": "Dislike",
-     "how": "Nắm tay, ngón cái chìa XUỐNG..", "frames": ["dislike.png"],
+     "how": "Nắm tay, ngón cái chìa XUỐNG.", "frames": ["dislike.png"],
      "command": "Thoát chế độ trình chiếu"},
 ]
 
