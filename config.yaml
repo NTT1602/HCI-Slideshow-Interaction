@@ -25,7 +25,7 @@ confirm_hold_ms: 400     # giữ like bao lâu thì xác nhận
 confirm_timeout_ms: 5000 # không like/dislike trong ngần này thì về IDLE
 hold_ms: 400             # policy có ARM: thời gian giữ cử chỉ lệnh
 swipe_hold_ms: 0         # policy swipe: 0 = nhận ngay khi GRU báo vuốt (đỉnh GRU chỉ dài ~300 ms). Lỗi nhiều -> 100-200
-presence_arm_ms: 200   # policy swipe: tay phải hiện liên tục ngần này ms mới ARMED; mất tay thì về IDLE
+presence_arm_ms: -1   # policy swipe: tay phải hiện liên tục ngần này ms mới ARMED; mất tay thì về IDLE
 disabled_commands: [play_pause]  # mở bàn tay = Space = sang slide trong PowerPoint -> dễ nhảy slide khi nói; tắt
 cooldown_ms: 800         # nghỉ sau mỗi lệnh. Một cú vuốt bị tính 2 lần -> tăng lên 1000-1500
 reverse_block_ms: 2500   # sau một cú vuốt, bỏ qua chiều ngược trong ngần này (nhịp đưa tay về bị đọc thành lệnh ngược); 0 = tắt
