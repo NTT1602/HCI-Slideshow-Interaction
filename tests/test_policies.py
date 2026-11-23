@@ -22,8 +22,8 @@ def test_every_policy_in_config_is_registered():
 
 
 def test_adaptive_stricter_when_hand_moves_fast():
-    still = get_policy("adaptive")(Config(), Context(0, 0.0))
-    fast = get_policy("adaptive")(Config(), Context(0, 3.0))
+    still = get_policy("adaptive_speed")(Config(), Context(0, 0.0))
+    fast = get_policy("adaptive_speed")(Config(), Context(0, 3.0))
     assert fast.min_conf > still.min_conf and fast.hold_ms > still.hold_ms
 
 
