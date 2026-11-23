@@ -13,7 +13,7 @@ from ..datatypes import COMMANDS, NONE_LABEL, POSE_COMMANDS, FeatureWindow, Hypo
 
 RULE_TEMPLATES = {
     "arm":        (0, 0, 0, 0, 0),        # nắm tay
-    "play_pause": (1, 1, 0, 0),        # mở bàn tay
+    "play_pause": (1, 1, 1, 1),        # mở bàn tay
     "like":       (0, 0, 0, 0, 1),     # nắm tay + ngón cái lên   -> start_show (vào trình chiếu)
     "dislike":    (0, 0, 0, 0, -1),    # nắm tay + ngón cái xuống -> exit_show (thoát trình chiếu)
 }
