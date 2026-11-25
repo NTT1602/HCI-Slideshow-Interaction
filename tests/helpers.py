@@ -13,9 +13,8 @@ THUMBS = {
 def make_hand(ext, cx=0.5, cy=0.8, s=0.15, thumb="tuck"):
     """Bàn tay giả 21 landmark; ext = mức duỗi 4 ngón (trỏ, giữa, nhẫn, út)."""
     lm = [[cx, cy, 0.0]]
-    ang, dists = THUMBS[thumb]  # ngón cái: tuck = gập vào lòng bàn tay, up/down = duỗi chĩa lên/xuống
-    for dist in dists:
-        lm.append([cx + math.sin(ang) * dist * s, cy - math.cos(ang) * dist * s, 0.0])
+    for dx, dy in THUMBS[thumb]:  # 4 khớp ngón cái theo (dx, dy); tuck = gập vào lòng bàn tay, up/down = duỗi chĩa lên/xuống (y âm = lên)
+        lm.append([cx + dx * s, cy + dy * s, 0.0])
     for f, e in enumerate(ext):
         a, k = (-0.2, -0.07, 0.07, 0.2)[f], (0.85 if f == 3 else 1.0)
         for dist in (1.0 * k, (1.3 + 0.2 * e) * k, (1.15 + 0.65 * e) * k, (0.9 + 1.2 * e) * k):
@@ -24,7 +23,8 @@ def make_hand(ext, cx=0.5, cy=0.8, s=0.15, thumb="tuck"):
 
 
 POSES = {"arm": (1, 1, 1, 1), "next": (1, 1, 0, 0), "previous": (1, 0, 0, 0), "fist": (0, 0, 0, 0), "other": (0, 1, 0, 0),
-         "three": (1, 1, 1, 0), "like": (0, 0, 0, 0), "dislike": (0, 0, 0, 0)}  # fist = nắm tay (play_pause); other = tư thế không phải lệnh
+         "three": (1, 1, 1, 0), "like": (0, 0, 0, 0), "dislike": (0, 0, 0, 0),
+         "none": (0, 1, 0, 0), "open": (1, 1, 1, 1)}  # fist = nắm tay (play_pause); other = tư thế không phải lệnh
 
 
 def session(segments, dt=33):

@@ -1,0 +1,6 @@
+# Chỉ những gì bộ test cần. Không có mediapipe / tensorflow / pynput (test không đụng tới), nên cài nhanh và không dính xung đột ml_dtypes.
+numpy>=1.26,<2
+opencv-python-headless>=4.9
+PyYAML>=6.0
+pytest>=8
+ruff>=0.5

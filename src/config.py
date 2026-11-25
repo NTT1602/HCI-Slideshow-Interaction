@@ -36,6 +36,7 @@ class Config:
     confirm_commands: list = field(default_factory=list)  # lệnh cần bước xác nhận (like) trước khi thực hiện; hiện không dùng
     confirm_hold_ms: int = 400
     confirm_timeout_ms: int = 4000
+    presence_arm_ms: int = -1   # policy không ARM: -1 = ARMED ngay (cũ); >=0 = mất tay → IDLE, tay hiện đủ ngần ms → ARMED
     margin: float = 0.25
     uncertain_floor: float = 0.40
     # adaptive / combined: ngưỡng theo độ mơ hồ (cùng tham số mặc định với HCI-project/src/policies.py)

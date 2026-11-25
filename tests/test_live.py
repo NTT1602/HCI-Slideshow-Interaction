@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from src.config import load_config
 from src.live import Heartbeat
 
@@ -18,5 +20,5 @@ def test_heartbeat_can_be_turned_off():
 
 
 def test_config_yaml_has_preview_and_status_options():
-    cfg = load_config("config.yaml")
+    cfg = load_config(str(Path(__file__).parents[1] / "config.yaml"))
     assert cfg.preview_width > 0 and cfg.status_every_s == 5 and cfg.preview_topmost is True
