@@ -30,12 +30,28 @@ Model GRU được **train ở repo nghiên cứu riêng** `HCI-project` (máy n
   `HCI-project/reports/frames/evaluation/policy_summary.csv` có fixed == fixed_abstention ở mọi chỉ số trừ abstention_rate).
 - Replay session 23:23 (người dùng chỉ vuốt next ~10 lần): fixed 5 next + 3 previous sai; abstain/combined 7 next + 1 previous sai.
   Chưa phải kết quả chính thức vì session chưa có nhãn ý định.
+- (2026-11-21) Thực nghiệm offline trong HCI-project (`src/09_compare_models.py`, `10_tune_policies.py`, `11_summarize_experiments.py`;
+  phân tích `reports/EXPERIMENTS_NOTES.md`, số liệu `reports/EXPERIMENTS_RESULTS.md`). Abstention mới đã port sang `HCI-project/src/policies.py`
+  (C1/C2 giữ nguyên kết quả cũ). Kết quả trên Jester test, chỉ next/previous là lệnh, kích hoạt nhầm ≤ 2%:
+  - Cấu hình demo `swipe` (giữ 0 ms) với GRU: 59% đúng lệnh sạch, **30% kèm lệnh sai chiều**; C1 chỉnh (ngưỡng 0.8, giữ 500 ms, cooldown ~0.8 s):
+    75.3% / 7.5% sai chiều / 1.6% nhầm. Mọi model đều chọn ngưỡng ~0.8 + giữ 500 ms.
+  - Model: BiGRU 78.5% (C2), LSTM 77.7% (C4), GRU 75.3%, MLP 66%; cửa sổ 10–12 bước không giảm độ trễ. Một seed/model.
+  - RQ1: C2 ≈ C1 ở 7/9 model, hơn ở BiGRU/TCN. RQ2: abstention không nhất quán trên Jester giả lập (hơn ở TCN/LSTM, kém ở GRU/attention),
+    cần dữ liệu thật có nhịp lấy đà/đưa tay về để kết luận.
+- (2026-11-22) Nhóm đã thu **dữ liệu thật có nhãn ý định** (67 video, 2 người: 6 video thuyết trình dài + 61 clip near-miss) ở
+  `HCI-project/data/real_*.csv`. Đánh giá (`HCI-project/src/12_eval_real.py`, `reports/REAL_DATA_EVAL.md`): mọi model Jester chỉ nhận 5–11/29 lệnh;
+  BiGRU (app) 7/29. Nguyên nhân chính: người đứng xa camera -> tay nhỏ ~4 lần Jester, model dùng tọa độ thô nên không thấy cú vuốt.
+  C1–C4 không khác nhau đo được. Near-miss cự ly gần bị bắn 69%. Khi demo: đứng gần camera.
+  Đã thử train lại với tăng cường "đứng xa" (co tọa độ tay 1–5 lần, `*_far.keras`): trúng 11–16/29 nhưng nhầm 87–133 lần/17 phút;
+  ở cùng mức nhầm không hơn model cũ -> **không đổi model app**.
 
 Chưa có / việc tiếp theo (theo thứ tự ưu tiên):
-1. **Dữ liệu thật có nhãn ý định** — lỗ hổng lớn nhất. Mọi session hiện có `truth = null`. Ý tưởng: chế độ thu theo kịch bản trong UI
+1. **Dữ liệu thật có nhãn ý định** — đã có bản đầu ở HCI-project (29 lệnh, 2 người); cần thêm người, trích ~17 phút video "harmonic oscillation"
+   đã gán nhãn, và train lại với tăng cường tỉ lệ / fine-tune trên dữ liệu thật. Session của app vẫn có `truth = null`. Ý tưởng: chế độ thu theo kịch bản trong UI
    (nhắc "vuốt NEXT" / "nói tự nhiên 30 s" / "chỉ vào màn hình" theo lịch, tự ghi `truth = cmd:next` / `bg:...`), rồi `src/evaluation/metrics.py` tính được ngay.
 2. Hiệu chỉnh tham số abstention (`abstain_wait_ms`, `clear_conf`, `conflict_floor`) trên dữ liệu có nhãn; hiện là giá trị chọn tay.
-3. HCI-project vẫn dùng abstention cũ (vô tác dụng) -> port abstention mới sang `HCI-project/src/policies.py` nếu muốn đánh giá offline trên Jester.
+3. ~~Port abstention sang HCI-project~~ (xong 2026-11-21). Còn: train thêm 2–3 seed cho GRU/BiGRU/LSTM trước khi đổi model của app;
+   cân nhắc đổi cấu hình demo sang ngưỡng 0.8 + giữ 500 ms (giữ 0 ms gây sai chiều rất nhiều trong thực nghiệm).
 4. Chốt bộ cử chỉ: thumb up/down giờ là LỆNH (start/exit) nhưng HCI-project coi Thumb Up/Down là near-miss -> `near_miss_trigger_rate` cho chúng mất nghĩa.
 5. Tách cấu hình demo (`swipe`, gate lỏng) khỏi cấu hình thực nghiệm (C1–C4 chung hold/cooldown/reverse_block) khi chạy so sánh.
 6. Latency: mô phỏng ~1.5 s từ lúc bắt đầu cử chỉ (cửa sổ GRU 2.7 s). Mục tiêu <100 ms trong báo cáo chỉ là phần mềm sau quyết định — ghi rõ khi báo cáo.
@@ -78,8 +94,9 @@ CameraSource (lật gương) -> HandTracker -> Observation -> FeatureExtractor -
   Hết nghi ngờ -> thực thi; hết hạn: đủ ngưỡng và chiều ngược đã hết -> thực thi, ngược lại REJECT `abstain_timeout`.
   Nhắm vào lỗi lớn nhất: đoạn lấy đà bị đọc thành chiều ngược. Cử chỉ rõ (≥ `clear_conf`, không mâu thuẫn) không bị chậm thêm.
   `Hypothesis.swipe_probs` (Hybrid luôn gắn xác suất GRU next/previous, kể cả khi luật thắng) là nguồn để dò mâu thuẫn.
-- **Mặc định `policy: swipe`** (demo): không ARM, gate để lỏng theo yêu cầu: `conf` 0.7, `gru_override` 0.7, `swipe_hold_ms` 0 (đỉnh GRU chỉ dài ~300 ms),
-  `cooldown_ms` 800, `reverse_block_ms` 2500 (nhịp đưa tay về bị GRU đọc thành lệnh ngược). Nhảy slide bừa -> tăng `conf`/`gru_override`.
+- **Mặc định `policy: swipe`** (demo, đổi 2026-11-21 theo yêu cầu): `gru_override` 0.8 (= ngưỡng cho vuốt), `swipe_hold_ms` 100 (ban đầu 500, hạ theo yêu cầu), `conf` 0.7
+  (để thumb up/down vẫn qua — luật chỉ đạt ~0.86). Replay session thật cho thấy giữ 500 ms làm sót nhiều cú vuốt (đỉnh GRU thật chỉ ~300 ms;
+  phiên 23:23: 10 -> 4 lần next); 167 ms giữ được 8–9/10. `cooldown_ms` 800, `reverse_block_ms` 2500 (nhịp đưa tay về bị GRU đọc thành lệnh ngược). Nhảy slide bừa -> tăng `conf`/`gru_override`.
   `disabled_commands: [play_pause]` vì mở bàn tay -> Space -> PowerPoint sang slide khi đang nói.
   `command_hold_ms` áp dụng cho mọi policy trừ `naive`.
 
@@ -110,8 +127,9 @@ CameraSource (lật gương) -> HandTracker -> Observation -> FeatureExtractor -
 - Có sẵn 17 test fail (từ trước khi tích hợp GRU): `tests/helpers.make_hand` unpack sai `THUMBS` (4 điểm, code mong 2 giá trị),
   một số test mong nhãn `none` trong probs, và vài test vẫn dựng next/previous bằng tư thế 1–2 ngón (đã bỏ).
   `test_gru_recognizer.py`, `test_swipe_policy.py`, `test_ambiguity_policies.py` dùng helper riêng và đều pass.
-- Model GRU hiện tại (v1, `models/gru/`): train trên CSV Jester theo frame (58k video, 6 fps, `step_ms` 166.7), accuracy 92.2% offline
-  (F1 next 0.88, previous 0.88, none 0.94). Bản cũ v0 (1 dòng/video, 81%) đã xóa khỏi repo này; còn backup ở `HCI-project/models/v0_video_level/`.
+- Model hiện tại trong `models/gru/` (vẫn tên `gru.keras`) là **BiGRU** (`HCI-project/models/zoo/bigru_L16.keras`, đổi 2026-11-21): Jester theo frame,
+  accuracy 92.2%, F1 next 0.87 / previous 0.87 / none 0.95, ~6 ms/lần suy luận. GRU v1 cũ (92.2%) còn ở `HCI-project/models/gru.keras` và trong git.
+  Trên session thật BiGRU không hơn GRU rõ rệt. Bản cũ v0 (1 dòng/video, 81%) đã xóa khỏi repo này; còn backup ở `HCI-project/models/v0_video_level/`.
 - Mô phỏng offline (HCI-project, conf 0.8): `wrong_command_rate` 34%, median latency 1.5 s. Với cấu hình chỉ next/previous, giữ 200 ms,
   cooldown 2 s: vuốt đúng 82.5% nhưng 16.6% cú vuốt có thêm lệnh NGƯỢC CHIỀU, phần lớn bắn TRƯỚC lệnh đúng (đoạn lấy đà).
   Tăng giữ lên 350–500 ms và/hoặc `conf` 0.9 giảm còn 4–12% (bảng trong `HCI-project/reports/frames/`). Abstention C3 nhắm đúng lỗi này.
