@@ -25,12 +25,12 @@ command_hold_ms:         # tư thế tĩnh phải giữ bao lâu (policy swipe v
 confirm_commands: []     # không lệnh nào cần bước xác nhận nữa
 confirm_hold_ms: 400     # giữ like bao lâu thì xác nhận
 confirm_timeout_ms: 5000 # không like/dislike trong ngần này thì về IDLE
-hold_ms: 400             # C1-C4: thời gian giữ cử chỉ lệnh (dùng chung để so sánh công bằng)
+hold_ms: 200             # C1-C4: thời gian giữ cử chỉ lệnh (dùng chung để so sánh công bằng)
 swipe_hold_ms: 0         # policy swipe: 0 = nhận ngay khi GRU báo vuốt (đỉnh GRU chỉ dài ~300 ms). Lỗi nhiều -> 100-200
 presence_arm_ms: -1   # policy swipe: tay phải hiện liên tục ngần này ms mới ARMED; mất tay thì về IDLE
 disabled_commands: [play_pause]  # mở bàn tay = Space = sang slide trong PowerPoint -> dễ nhảy slide khi nói; tắt
 cooldown_ms: 800         # nghỉ sau mỗi lệnh. Một cú vuốt bị tính 2 lần -> tăng lên 1000-1500
-reverse_block_ms: 2500   # sau một cú vuốt, bỏ qua chiều ngược trong ngần này (nhịp đưa tay về bị đọc thành lệnh ngược); 0 = tắt
+reverse_block_ms: 1000   # sau một cú vuốt, bỏ qua chiều ngược trong ngần này (nhịp đưa tay về bị đọc thành lệnh ngược); 0 = tắt
 margin: 0.25             # abstain/combined: chênh lệch top-1/top-2 tối thiểu
 uncertain_floor: 0.40    # dưới mức này coi như không phải lệnh (không vào trạng thái chưa chắc)
 
@@ -44,7 +44,7 @@ stability_window_ms: 800
 
 # C3 abstain / C4 combined: còn nghi ngờ thì quan sát thêm, hết hạn vẫn không rõ thì từ chối
 abstain_wait_ms: 600     # thời gian quan sát thêm tối đa
-clear_conf: 0.90         # qua ngưỡng nhưng dưới mức này = "chưa rõ", phải quan sát thêm
+clear_conf: 0.85         # qua ngưỡng nhưng dưới mức này = "chưa rõ", phải quan sát thêm
 conflict_floor: 0.50     # chiều vuốt ngược có p >= mức này trong conflict_window_ms = mâu thuẫn hướng
 conflict_window_ms: 700
 
