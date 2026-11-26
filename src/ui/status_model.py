@@ -13,7 +13,7 @@ STATE_VIEW = {
     "COOLDOWN": ("NGHỈ", "#6D28D9", "Chờ giây lát"),
 }
 OFF_COLOR = "#374151"
-MODE_VIEW = {True: ("● TẬP", "#D2AA06"), False: ("● GỬI THẬT", "#DC2828")}
+MODE_VIEW = {True: ("● TẬP", "#D2AA06"), False: ("● GỬI THẬT", "#3FA9F5")}
 
 
 def view_model(snap: dict, now: float) -> dict:
